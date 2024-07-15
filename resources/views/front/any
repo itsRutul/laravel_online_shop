@@ -1,0 +1,222 @@
+@extends('front.layouts.app')
+
+@section('content')
+<main>
+    <!-- Existing sections here -->
+
+    <section class="section-7 pt-3 mb-3">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-5 position-relative">
+                    <div id="product-carousel" class="carousel slide">
+                        <div class="carousel-inner bg-light">
+                            @foreach(json_decode($product->image) as $index => $image)
+                                <div class="carousel-item {{ $index == 0 ? 'active' : '' }}" data-color="{{ pathinfo($image, PATHINFO_FILENAME) }}">
+                                    <div class="zoom-container">
+                                        <img class="w-100 h-100 product-image" src="{{ asset('product_images/' . $image) }}" alt="{{ $product->title }}">
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <a class="carousel-control-prev" href="#product-carousel" data-bs-slide="prev">
+                            <i class="fa fa-2x fa-angle-left text-dark"></i>
+                        </a>
+                        <a class="carousel-control-next" href="#product-carousel" data-bs-slide="next">
+                            <i class="fa fa-2x fa-angle-right text-dark"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-md-7 position-relative">
+                    <div class="bg-light right">
+                        <h1>{{ $product->title }}</h1>
+                        <div class="d-flex mb-3">
+                            <div class="text-primary mr-2">
+                                <!-- Dynamic rating stars here -->
+                            </div>
+                            <!-- Dynamic number of reviews here -->
+                        </div>
+                        <div class="price mt-2">
+                            <h2 class="price text-secondary"><del>${{ $product->compare_price }}</del></h2>
+                            @if ($product->compare_price)
+                                <h2 class="price "> ${{ $product->price }} </h2>
+                            @endif
+                        </div>
+                        <p>
+                            {!! $product->description !!} <!-- Output product description dynamically -->
+                        </p>
+                        <a class="btn btn-dark" href="{{ route('front.cart.add', $product->id) }}">
+                            <i class="fa fa-shopping-cart"></i> Add To Cart
+                        </a>
+                    </div>
+
+                    @if(!is_null(json_decode($product->size)) && count(json_decode($product->size)) > 0)
+                        <div class="mb-3">
+                            <label for="size">Size:</label>
+                            <select name="size" id="size" class="form-control">
+                                @foreach(json_decode($product->size) as $size)
+                                    <option value="{{ $size }}">{{ $size }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+
+                    @if(!is_null(json_decode($product->color)) && count(json_decode($product->color)) > 0)
+                        <div class="mb-3">
+                            <label for="color">Color:</label>
+                            <select name="color" id="color" class="form-control">
+                                @foreach(json_decode($product->color) as $color)
+                                    <option value="{{ $color }}">{{ ucfirst($color) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+
+                    <!-- Zoomed Image Container -->
+                    <div class="zoomed-image-container">
+                        <img class="zoomed-image" src="" alt="Zoomed Image">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="pt-5 section-8">
+        <div class="container">
+            <div class="section-title">
+                <h2>Related Products</h2>
+            </div> 
+            <div class="col-md-12">
+                <div class="row">
+                    @foreach($relatedProducts as $relatedProduct)
+                        <div class="col-md-3">
+                            <div class="card product-card">
+                                <div class="product-image position-relative">
+                                    <a href="{{ route('front.show', $relatedProduct->id) }}" class="product-img">
+                                        <img class="card-img-top" src="{{ asset('product_images/' . json_decode($relatedProduct->image)[0]) }}" alt="{{ $relatedProduct->title }}">
+                                    </a>
+                                    <div class="product-action">
+                                        <i class="fa fa-shopping-cart"></i> Add To Cart
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ $relatedProduct->title }}</h5>
+                                    <p class="card-text">${{ $relatedProduct->price }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- CSS for Zoom Effect -->
+<style>
+    .zoom-container {
+        position: relative;
+        width: 550px;
+        height: 550px;
+        overflow: hidden;
+    }
+
+    .product-image {
+        display: block;
+        width: 550px;
+        height: 550px;
+        transition: transform 0.3s ease;
+        object-fit: contain;
+    }
+
+    .zoomed-image-container {
+        position: absolute;
+        top: 0;
+        right: -250px; /* Position to the right of the original image */
+        width: 1000px;
+        height: 1000px;
+        border: 1px solid #111111;
+        overflow: hidden;
+        display: none; /* Hide initially */
+        z-index: 10; /* Ensure it appears above other elements */
+    }
+
+    .zoomed-image {
+        position: absolute;
+        width: auto;
+        height: 100%;
+    }
+</style>
+
+<!-- JavaScript for Image Zoom and Color Selection -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const productImages = document.querySelectorAll('.product-image');
+    const colorSelect = document.getElementById('color');
+    const carouselInner = document.querySelector('.carousel-inner');
+
+    // Mapping of colors to image filenames (replace with actual logic if needed)
+    const colorToImageMap = {
+            @foreach(json_decode($product->color) as $index => $color)
+                '{{ $color }}': '{{ asset("product_images/" . pathinfo(json_decode($product->image)[$index], PATHINFO_FILENAME) . ".jpg") }}',
+            @endforeach
+        };
+
+    colorSelect.addEventListener('change', function() {
+        const selectedColor = this.value;
+        const carouselItems = carouselInner.querySelectorAll('.carousel-item');
+
+        carouselItems.forEach(function(item) {
+            const dataColor = item.getAttribute('data-color');
+            if (dataColor === selectedColor) {
+                item.style.display = 'none'; // Hide the carousel item
+            } else {
+                item.style.display = 'block'; // Show other carousel items
+            }
+        });
+
+        // Update zoomed image if selected color matches an image
+        if (colorToImageMap[selectedColor]) {
+            const zoomedImg = document.querySelector('.zoomed-image');
+            zoomedImg.setAttribute('src', colorToImageMap[selectedColor]);
+        }
+    });
+
+    productImages.forEach(function(img) {
+        const zoomedImgContainer = document.querySelector('.col-md-7 .zoomed-image-container');
+
+        if (!zoomedImgContainer) {
+            console.error('Zoomed image container not found.');
+            return;
+        }
+
+        const zoomedImg = zoomedImgContainer.querySelector('.zoomed-image');
+
+        img.addEventListener('mouseover', function() {
+            const imgSrc = this.getAttribute('src');
+            zoomedImgContainer.style.display = 'block';
+            zoomedImg.setAttribute('src', imgSrc);
+        });
+
+        img.addEventListener('mousemove', function(e) {
+            const rect = this.getBoundingClientRect();
+            const xPos = e.clientX - rect.left;
+            const yPos = e.clientY - rect.top;
+
+            const xPercent = xPos / rect.width;
+            const yPercent = yPos / rect.height;
+
+            const zoomedImgX = -xPercent * (zoomedImg.width - zoomedImgContainer.clientWidth);
+            const zoomedImgY = -yPercent * (zoomedImg.height - zoomedImgContainer.clientHeight);
+
+            zoomedImg.style.left = `${zoomedImgX}px`;
+            zoomedImg.style.top = `${zoomedImgY}px`;
+        });
+
+        img.addEventListener('mouseout', function() {
+            zoomedImgContainer.style.display = 'none';
+        });
+    });
+});
+</script>
+@endsection
